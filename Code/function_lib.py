@@ -138,7 +138,7 @@ def load_shortest_path_setting_with_splits(
         valid_dl = DataLoader(valid_ds, batch_size=batch_size, shuffle=False)
         test_dl  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False)
 
-        return train_dl, valid_dl, test_dl
+        return y_train, x_test, y_test, train_dl, valid_dl, test_dl
 
     # ------------------------------------------------------------------
     # 2. If a specific seed is requested
@@ -211,3 +211,7 @@ def load_shortest_path_setting(
         loader_list.append(DataLoader(dataset, batch_size=batch_size, shuffle=True))
 
     return loader_list
+
+#######################################################################################################################################
+########################################################### Dataset function ##########################################################
+#######################################################################################################################################
