@@ -12,6 +12,7 @@ import networkx as nx
 import gurobipy as gp
 import matplotlib.pyplot as plt
 import pytorch_lightning as pl
+import seaborn as sns
 
 from torch.utils.data import DataLoader, TensorDataset
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -49,7 +50,13 @@ class DataWrapper():  # If redefine the dataset, must rewrite len, getitem funct
     
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
-    
+
+def figure_size(fig_width):
+    # Define the golden ratio
+    golden_ratio = (1 + 5**0.5) / 2
+    fig_height = fig_width / golden_ratio
+    return (fig_width, fig_height)
+
 #######################################################################################################################################
 ########################################################### Dataset function ##########################################################
 #######################################################################################################################################
