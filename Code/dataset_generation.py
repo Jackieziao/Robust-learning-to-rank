@@ -96,7 +96,7 @@ if __name__ == '__main__':
                 for deg in degs
                 for grid_width in grid_widths]
 
-    base_path = change_to_parent_dir_once(True)
+    base_path = change_to_py_file_dir(True)
     print("Start to generate datasets for shortest path problem (pkl only).")
 
     out_dir = os.path.join(base_path, "Data", "Shortest_path")
