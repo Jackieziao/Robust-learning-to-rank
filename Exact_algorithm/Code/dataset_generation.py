@@ -82,12 +82,19 @@ def generate_instances(num_instances,
 
 
 if __name__ == '__main__':
-    n_simulation = 50          # number of seeds (= number of instances in the pickle)
+    # n_simulation = 50          # number of seeds (= number of instances in the pickle)
+    # degs = [1, 2, 4, 6, 8]
+    # input_dims = [5]
+    # ns = [100, 1000, 5000]     # num_instances per seed
+    # mult_noises = [0, 0.5]
+    # grid_widths = [5]
+
+    n_simulation = 30          # number of seeds (= number of instances in the pickle)
     degs = [1, 2, 4, 6, 8]
-    input_dims = [5]
-    ns = [100, 1000, 5000]     # num_instances per seed
+    input_dims = [3]
+    ns = [100]     # num_instances per seed
     mult_noises = [0, 0.5]
-    grid_widths = [5]
+    grid_widths = [3]
 
     SETTINGS = [(n, input_dim, mult_noise, deg, grid_width)
                 for n in ns
@@ -100,6 +107,7 @@ if __name__ == '__main__':
     print("Start to generate datasets for shortest path problem (pkl only).")
 
     out_dir = os.path.join(base_path, "Data", "Shortest_path")
+    print(out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
     for (n, input_dim, mult_noise, deg, grid_width) in SETTINGS:
