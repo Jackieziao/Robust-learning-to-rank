@@ -6,6 +6,7 @@ import random
 import shutil
 import gc
 import psutil
+import sys
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,7 @@ import seaborn as sns
 import gurobipy as gp
 
 from pathlib import Path
+from mosek.fusion import *
 from mosek.fusion import Model, Variable, Matrix, Expr, Domain, ObjectiveSense
 from tqdm import tqdm
 from gurobipy import GRB
@@ -456,7 +458,9 @@ class LSTECPParam:
         self.pipar.setValue(pi_val)
 
         # Logging control
-        if not verbose:
+        if verbose:
+            self.M.setLogHandler(sys.stdout)
+        else:
             self.M.setLogHandler(None)
 
         # Solve
