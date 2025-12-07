@@ -546,7 +546,8 @@ class LSTECPParam:
         optimal_costs = obj_true.min(axis=1)
 
         # F. Compute Regret
-        regrets = chosen_costs - optimal_costs
+        # regrets = chosen_costs - optimal_costs
+        regrets = (chosen_costs - optimal_costs)/optimal_costs
 
         # ---------------------------------------------------------
         # 3. Result formatting
