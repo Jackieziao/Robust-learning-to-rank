@@ -1245,7 +1245,7 @@ class MLEECPParam:
             S_batch = Expr.pick(S, idx_S_batch)
             t_batch = Expr.pick(self.t_var, idx_t_batch)
             
-            diff_batch = Expr.sub(S_batch, t_batch)
+            diff_batch = Expr.neg(Expr.add(S_batch, t_batch))
 
             # 3. Constant eta for this batch (Expr.constTerm is correct here for hstack)
             eta_batch = Expr.constTerm(current_size, self.eta)
@@ -1273,7 +1273,7 @@ class MLEECPParam:
         # -----------------------------------------------------------
         sum_t = Expr.sum(self.t_var)
         sum_S = Expr.sum(S)
-        obj_expr = Expr.mul(1.0 / self.N, Expr.sub(sum_t, sum_S))
+        obj_expr = Expr.mul(1.0 / self.N, Expr.add(sum_t, sum_S))
         M.objective("obj", ObjectiveSense.Minimize, obj_expr)
 
     def _compute_phi_from_C(self, C):

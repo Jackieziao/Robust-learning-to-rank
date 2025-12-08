@@ -13,6 +13,7 @@ import gurobipy as gp
 import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 import seaborn as sns
+import torch.nn.functional as F
 
 from torch.utils.data import DataLoader, TensorDataset
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -70,7 +71,7 @@ def load_shortest_path_setting_with_splits(
     grid_width,
     seed=None,
     batch_size=32,
-    train_ratio=0.8,
+    train_ratio=0.9,
     valid_ratio=0.1,
     shuffle_train=True,
 ):
@@ -134,6 +135,29 @@ def load_shortest_path_setting_with_splits(
     with open(pkl_path, "rb") as f:
         instances = pickle.load(f)  # list of dicts: {"seed": s, "x": X_s, "y": Y_s}
 
+    # def _make_splits_for_instance(inst):
+    #     """Create train/valid/test DataLoaders for a single seed-instance."""
+    #     X = inst["x"]
+    #     Y = inst["y"]
+    #     n_samples = len(X)
+
+    #     n_train = int(n_samples * train_ratio)
+    #     n_valid = int(n_samples * valid_ratio)
+    #     n_test = n_samples - n_train - n_valid
+
+    #     x_train, y_train = X[:n_train], Y[:n_train]
+    #     x_valid, y_valid = X[n_train:n_train + n_valid], Y[n_train:n_train + n_valid]
+    #     x_test,  y_test  = X[n_train + n_valid:],       Y[n_train + n_valid:]
+
+    #     train_ds = DataWrapper(x_train, y_train)
+    #     valid_ds = DataWrapper(x_valid, y_valid)
+    #     test_ds  = DataWrapper(x_test,  y_test)
+
+    #     train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=shuffle_train)
+    #     valid_dl = DataLoader(valid_ds, batch_size=batch_size, shuffle=False)
+    #     test_dl  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False)
+
+    #     return y_train, x_test, y_test, train_dl, valid_dl, test_dl
     def _make_splits_for_instance(inst):
         """Create train/valid/test DataLoaders for a single seed-instance."""
         X = inst["x"]
@@ -142,11 +166,11 @@ def load_shortest_path_setting_with_splits(
 
         n_train = int(n_samples * train_ratio)
         n_valid = int(n_samples * valid_ratio)
-        n_test = n_samples - n_train - n_valid
+        n_test = n_samples - n_train
 
         x_train, y_train = X[:n_train], Y[:n_train]
-        x_valid, y_valid = X[n_train:n_train + n_valid], Y[n_train:n_train + n_valid]
-        x_test,  y_test  = X[n_train + n_valid:],       Y[n_train + n_valid:]
+        x_valid, y_valid = X[n_train-n_valid:n_train], Y[n_train-n_valid:n_train]
+        x_test,  y_test  = X[n_train:],       Y[n_train:]
 
         train_ds = DataWrapper(x_train, y_train)
         valid_ds = DataWrapper(x_valid, y_valid)
@@ -156,7 +180,7 @@ def load_shortest_path_setting_with_splits(
         valid_dl = DataLoader(valid_ds, batch_size=batch_size, shuffle=False)
         test_dl  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False)
 
-        return y_train, x_test, y_test, train_dl, valid_dl, test_dl
+        return y_train, x_test, y_test, train_dl, valid_dl, test_dl 
 
     # ------------------------------------------------------------------
     # 2. If a specific seed is requested
@@ -379,7 +403,10 @@ def regret_fn(solver: ShortestPathSolver, y_hat: torch.Tensor, y: torch.Tensor, 
     sol_true = sol_true.to(y.device)
 
     # Regret per sample: (x_hat - x_opt) · y
-    regret_per_sample = mm * ((sol_hat - sol_true) * y).sum(dim=1)
+    # regret_per_sample = mm * ((sol_hat - sol_true) * y).sum(dim=1)
+    num = mm * ((sol_hat - sol_true) * y).sum(dim=1)
+    denom = torch.clamp((sol_true * y).sum(dim=1), min=1e-9)
+    regret_per_sample = num / denom
 
     return regret_per_sample.mean()
 
@@ -481,7 +508,7 @@ class MSEModel(pl.LightningModule):
         regret_loss = regret_fn(self.solver, y_hat, y)
 
         self.log("val_mse", mse_loss, prog_bar=False, on_step=False, on_epoch=True)
-        self.log("val_regret", regret_loss, prog_bar=True, on_step=False, on_epoch=True)
+        self.log("val_regret", regret_loss, prog_bar=False, on_step=False, on_epoch=True)
 
         return {"val_mse": mse_loss, "val_regret": regret_loss}
 
@@ -504,8 +531,7 @@ class MSEModel(pl.LightningModule):
             optimizer,
             mode="min",
             factor=0.5,
-            patience=3,
-            verbose=False
+            patience=3
         )
         return {
             "optimizer": optimizer,
@@ -559,10 +585,308 @@ class SPOModel(MSEModel):
         self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
+def generate_all_feasible_solutions(grid_width=5):
+    """
+    Build a grid_width x grid_width directed grid (right & down edges),
+    and enumerate all feasible s->t paths (from NW to SE corner).
 
+    Returns
+    -------
+    feasible_solutions : list of np.ndarray
+        Each element is a 0–1 vector of length |E| indicating which edges are used.
+    edges : list of tuple
+        List of directed edges in fixed order consistent with the vectors.
+    G : networkx.DiGraph
+        The underlying directed grid graph.
+    """
+    # 1) Build graph
+    V = range(grid_width**2)
+    E = []
+    for i in V:
+        # edge to the right
+        if (i + 1) % grid_width != 0:
+            E.append((i, i + 1))
+        # edge downward
+        if i + grid_width < grid_width**2:
+            E.append((i, i + grid_width))
+    G = nx.DiGraph()
+    G.add_nodes_from(V)
+    G.add_edges_from(E)
+
+    # 2) Prepare edge indexing
+    edges = list(G.edges())
+    edge_index = {e: idx for idx, e in enumerate(edges)}
+
+    source = 0
+    target = max(G.nodes)
+
+    # 3) DFS to enumerate all s->t paths and convert to 0–1 vectors
+    feasible_solutions = []
+
+    def dfs(node, path_edges):
+        if node == target:
+            vec = np.zeros(len(edges), dtype=int)
+            for e in path_edges:
+                vec[edge_index[e]] = 1
+            feasible_solutions.append(vec)
+            return
+        for nbr in G.successors(node):
+            dfs(nbr, path_edges + [(node, nbr)])
+
+    dfs(source, [])
+
+    return feasible_solutions, edges, G
+
+def listnet_loss(y_hat, y_true, sols, eta, minimize=True):
+    """
+    Listwise loss (cross-entropy between softmax over true and predicted costs).
+
+    y_hat : (batch, num_edges)  predicted costs  ( \hat c )
+    y_true: (batch, num_edges)  true costs       ( c )
+    sols  : (|Z|, num_edges)    solution pool (0/1 incidence vectors)
+    eta   : temperature η
+    """
+    mm = 1.0 if minimize else -1.0
+
+    # Ensure sols is on the same device as y_hat (CUDA or CPU)
+    sols = sols.to(y_hat.device)
+
+    # costs_* : (batch, |Z|), f(c,z) = (mm * c)ᵀ z
+    costs_hat  = (mm * y_hat)  @ sols.t()
+    costs_true = (mm * y_true) @ sols.t()
+
+    # logits = - f(c, z) / η
+    logits_hat  = -costs_hat  / eta
+    logits_true = -costs_true / eta
+
+    # p_true(z) = softmax(-f(c,z)/η)
+    p_true    = F.softmax(logits_true, dim=1)        # (batch, |Z|)
+    log_p_hat = F.log_softmax(logits_hat, dim=1)     # (batch, |Z|)
+
+    # ℓ_n = - (1/|Z|) ∑_z p_true(z) log p_hat(z)
+    loss_per_sample = -(p_true * log_p_hat).mean(dim=1)  # mean over z
+
+    # final scalar loss (mean over batch)
+    return loss_per_sample.mean()
+
+def dio_loss(y_hat, y_true, sols, eta, minimize=True):
+    """
+    DIO loss:
+        ℓ_DIO(c, ĉ; Z) = η log ∑_z exp( ( f(ĉ, z*(c)) - f(ĉ, z) ) / η )
+
+    Args
+    ----
+    y_hat : (batch, num_edges)  predicted costs  (ĉ)
+    y_true: (batch, num_edges)  true costs       (c)
+    sols  : (|Z|, num_edges)    solution pool (0/1 incidence vectors)
+    eta   : temperature η
+    minimize : True if we solve a min-cost problem, False for max-cost
+    """
+    mm = 1.0 if minimize else -1.0
+
+    # Ensure sols is on the same device as y_hat
+    sols = sols.to(y_hat.device)
+
+    # f(c, z) = (mm * c)^T z for all z ∈ Z
+    # Shapes: (batch, |Z|)
+    f_true = (mm * y_true) @ sols.t()   # used only to find z*(c)
+    f_hat  = (mm * y_hat)  @ sols.t()   # used in the loss
+
+    # z*(c): index of optimal solution under true costs
+    if minimize:
+        best_idx = f_true.argmin(dim=1)   # (batch,)
+    else:
+        best_idx = f_true.argmax(dim=1)
+
+    batch_size = y_hat.size(0)
+    # f(ĉ, z*(c)) for each sample
+    f_hat_star = f_hat[torch.arange(batch_size, device=y_hat.device), best_idx]  # (batch,)
+
+    # margins: ( f(ĉ, z*(c)) - f(ĉ, z) ) / η  → shape (batch, |Z|)
+    margins = (f_hat_star.unsqueeze(1) - f_hat) / eta
+
+    # ℓ_n = η * logsumexp_z margins_n(z)
+    loss_per_sample = eta * torch.logsumexp(margins, dim=1)   # (batch,)
+
+    # Final scalar loss (average over batch)
+    return loss_per_sample.mean()
+
+def pairwise_loss(y_hat, y_true, sols, eta, minimize=True):
+    """
+    Pairwise DIO-style loss:
+
+        L(c, ĉ; Z) = η log ∑_{z,z'∈Z} 1{ f(c,z) ≤ f(c,z') } *
+                                 exp( ( f(ĉ,z) - f(ĉ,z') ) / η )
+
+    Args
+    ----
+    y_hat : (batch, num_edges)  predicted costs  (ĉ)
+    y_true: (batch, num_edges)  true costs       (c)
+    sols  : (|Z|, num_edges)    solution pool, 0/1 incidence vectors
+    eta   : temperature η
+    minimize : True if f is a cost (minimization problem), False for max
+    """
+    mm = 1.0 if minimize else -1.0
+
+    # Ensure sols on same device
+    sols = sols.to(y_hat.device)
+
+    # f(c, z) = (mm * c)^T z and f(ĉ, z) = (mm * ĉ)^T z
+    # Shapes: (batch, |Z|)
+    f_true = (mm * y_true) @ sols.t()
+    f_hat  = (mm * y_hat)  @ sols.t()
+
+    B, K = f_true.shape  # batch size, |Z|
+
+    # Build pairwise matrices: f_true(z), f_true(z')
+    # Shapes: (B, K, K)
+    f_true_i = f_true.unsqueeze(2)  # (B, K, 1)
+    f_true_j = f_true.unsqueeze(1)  # (B, 1, K)
+
+    # Indicator 1{ f_true(z) ≤ f_true(z') }
+    mask = (f_true_i <= f_true_j)   # bool, shape (B, K, K)
+
+    # Pairwise margins for predicted costs: f_hat(z) - f_hat(z')
+    f_hat_i = f_hat.unsqueeze(2)    # (B, K, 1)
+    f_hat_j = f_hat.unsqueeze(1)    # (B, 1, K)
+    margins = (f_hat_i - f_hat_j) / eta  # (B, K, K)
+
+    # Set margins for invalid pairs to a very negative number so their exp() ≈ 0
+    neg_large = torch.finfo(margins.dtype).min  # ~ -1e38 for float32
+    margins_masked = torch.where(mask, margins, torch.full_like(margins, neg_large))
+
+    # Flatten pairs (z,z') into a single axis per sample: shape (B, K*K)
+    margins_flat = margins_masked.view(B, -1)
+
+    # L_n = η * logsumexp over all valid pairs (z,z')
+    loss_per_sample = eta * torch.logsumexp(margins_flat, dim=1)  # (B,)
+
+    # Final scalar loss: average over batch
+    return loss_per_sample.mean()
+
+
+def likelihood_ranking_loss(y_hat, y_true, sols, eta, minimize=True):
+    """
+    Likelihood-style ranking loss:
+
+        ℓ(c, ĉ; Z) =
+            - ∑_{i=1}^{|Z|} f(ĉ, z_{φ(i)})
+            + ∑_{i=1}^{|Z|} η log ∑_{k=i}^{|Z|} exp( f(ĉ, z_{φ(k)}) / η ),
+
+    where φ is the permutation that sorts f(c, z) in non-decreasing order.
+
+    Args
+    ----
+    y_hat : (batch, num_edges)  predicted costs  (ĉ)
+    y_true: (batch, num_edges)  true costs       (c)
+    sols  : (|Z|, num_edges)    solution pool (0/1 incidence vectors)
+    eta   : temperature η
+    minimize : True if it's a min-cost problem, False if max-profit
+    """
+    mm = 1.0 if minimize else -1.0
+
+    # Move sols to correct device
+    sols = sols.to(y_hat.device)
+
+    # f(c, z) and f(ĉ, z) for all z ∈ Z
+    # Shapes: (batch, |Z|)
+    f_true = (mm * y_true) @ sols.t()
+    f_hat  = (mm * y_hat)  @ sols.t()
+
+    B, K = f_true.shape  # batch size, |Z|
+
+    # φ: argsort of true costs (ascending)
+    # φ[n, i] = index of i-th best z under true costs for sample n
+    _, phi = torch.sort(f_true, dim=1, descending=False)  # (B, K)
+
+    # Reorder predicted scores according to φ
+    # f_hat_sorted[n, i] = f_hat(n, z_{φ(i)})
+    f_hat_sorted = torch.gather(f_hat, dim=1, index=phi)  # (B, K)
+
+    # First term: -∑_i f(ĉ, z_{φ(i)})
+    term1 = f_hat_sorted.sum(dim=1)  # (B,)
+
+    # Second term: ∑_i η log ∑_{k=i}^{K} exp( f_hat_sorted[k] / η )
+    logits = -f_hat_sorted / eta  # (B, K)
+    term2 = torch.zeros(B, device=y_hat.device)
+
+    for i in range(K):
+        # log ∑_{k=i}^{K-1} exp( logits[:, k] )
+        lse_i = torch.logsumexp(logits[:, i:], dim=1)  # (B,)
+        term2 = term2 + eta * lse_i
+
+    loss_per_sample = term1 + term2  # (B,)
+
+    # Final scalar loss (mean over batch)
+    return loss_per_sample.mean()
+
+class LSTModel(MSEModel):
+
+    def __init__(self, loss_fn, sols, net, solver, eta, lr=1e-1, max_epochs=30):
+        """
+        Listwise model using a solution pool.
+
+        Args:
+            loss_fn: loss function (y_hat, y_true, sols, eta, minimize=True) -> scalar
+            sols:    (|Z|, num_edges) solution pool (tensor, can be on CPU)
+            net:     neural network x -> edge costs
+            solver:  shortest-path solver (used in parent MSEModel)
+            eta:     temperature η
+            lr:      learning rate
+            max_epochs: maximum number of epochs
+        """
+        super().__init__(net, solver, lr, max_epochs)
+
+        self.loss_fn = loss_fn
+
+        # ---- Normalize sols to a 2D numpy array on CPU ----
+        if isinstance(sols, torch.Tensor):
+            sols_np = sols.detach().cpu().numpy()
+        elif isinstance(sols, np.ndarray):
+            sols_np = sols
+        else:
+            # assume list-like
+            sols_np = np.array(sols, dtype=np.float32)
+
+        sols_np = np.unique(sols_np, axis=0)   # delete repeated elements
+        sols_t  = torch.from_numpy(sols_np).float()
+
+        # Register as buffer so it moves with .to(device) and under Lightning accelerators
+        self.register_buffer("sols", sols_t)
+
+        self.eta = eta
+
+        self.validation_step_mse = []
+        self.validation_step_regret = []
+
+        # Store simple hyperparams for checkpointing
+        self.save_hyperparameters({"lr": lr, "tau": eta})
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch               # Lightning will already move x,y to the correct device
+        y_hat = self(x)
+
+        # If net outputs (batch, num_edges, 1), squeeze only the last dim safely
+        if y_hat.dim() == 3 and y_hat.size(-1) == 1:
+            y_hat = y_hat.squeeze(-1)
+
+        # self.sols is a buffer, so it's already on the same device as the model
+        loss = self.loss_fn(y_hat, y, self.sols, self.eta, minimize=True)
+
+        self.log(
+            "train_loss",
+            loss,
+            prog_bar=False,
+            on_step=False,
+            on_epoch=True,
+        )
+        return loss
+
+    
 MODEL_DICT = {
     "mse": MSEModel,
     "spo": SPOModel,
+    "lst": LSTModel
 }
 
 def get_model_class(model_type: str):
