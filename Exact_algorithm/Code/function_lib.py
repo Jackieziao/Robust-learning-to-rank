@@ -21,6 +21,8 @@ from mosek.fusion import Model, Variable, Matrix, Expr, Domain, ObjectiveSense
 from tqdm import tqdm
 from gurobipy import GRB
 from unittest import case
+from matplotlib.ticker import PercentFormatter
+from matplotlib.patches import Patch
 
 #######################################################################################################################################
 ######################################################### Common function #############################################################
@@ -966,11 +968,11 @@ class PairwiseECPERM:
         n_indices, k_indices, l_indices = np.where(valid_mask)
         # remove diagonal pairs (z, z)
 
-        mask_offdiag = (k_indices != l_indices)
+        # mask_offdiag = (k_indices != l_indices)
 
-        n_indices = n_indices[mask_offdiag]
-        k_indices = k_indices[mask_offdiag]
-        l_indices = l_indices[mask_offdiag]
+        # n_indices = n_indices[mask_offdiag]
+        # k_indices = k_indices[mask_offdiag]
+        # l_indices = l_indices[mask_offdiag]
 
         Q = len(n_indices)
         self.Q = Q

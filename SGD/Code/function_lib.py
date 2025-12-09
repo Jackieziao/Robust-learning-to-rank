@@ -713,7 +713,7 @@ def dio_loss(y_hat, y_true, sols, eta, minimize=True):
 
 def pairwise_loss(y_hat, y_true, sols, eta, minimize=True):
     """
-    Pairwise DIO-style loss:
+    Pairwise loss:
 
         L(c, ĉ; Z) = η log ∑_{z,z'∈Z} 1{ f(c,z) ≤ f(c,z') } *
                                  exp( ( f(ĉ,z) - f(ĉ,z') ) / η )

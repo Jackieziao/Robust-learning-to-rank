@@ -1,5 +1,5 @@
 eta: 0.1
-loss_fn: !!python/name:function_lib.likelihood_ranking_loss ''
+loss_fn: !!python/name:function_lib.pairwise_loss ''
 lr: 0.1
 max_epochs: 5000
 sols:
