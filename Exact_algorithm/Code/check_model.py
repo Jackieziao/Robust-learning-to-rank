@@ -1,8 +1,5 @@
 from function_lib import *
 
-
-
-
 #########################################################################################################
 ##################################### Testing the implementation  #######################################
 #########################################################################################################
@@ -381,7 +378,8 @@ def tiny_spo_test():
 
 if __name__ == "__main__":
     FLAG = 4
-    eta=0.0001
+    eta=100
+    print('start')
     match FLAG:
         case 1:
             tiny_dio_ecp_test(eta)
@@ -395,3 +393,4 @@ if __name__ == "__main__":
             tiny_spo_test()
         case _:
             print("Unknown FLAG value")
+    print("All tests done.")

@@ -13,31 +13,31 @@ Task pairwise_ecp_erm_fast
 Objective obj
     Minimize + 0.5 't[0]' + 0.5 't[1]'
 Constraints
-    'sum_v_le_eta[0]' [-inf;0.0001] + 'v[0]' + 'v[1]' + 'v[2]'
-    'sum_v_le_eta[1]' [-inf;0.0001] + 'v[3]' + 'v[4]' + 'v[5]'
+    'sum_v_le_eta[0]' [-inf;100] + 'v[0]' + 'v[1]' + 'v[2]'
+    'sum_v_le_eta[1]' [-inf;100] + 'v[3]' + 'v[4]' + 'v[5]'
     'exp_cones[0]' [PEXP]
         @ac2: + 'v[0]'
-        @ac3: + 0.0001
+        @ac3: + 100
         @ac4: - 't[0]'
     'exp_cones[1]' [PEXP]
         @ac5: + 'v[1]'
-        @ac6: + 0.0001
+        @ac6: + 100
         @ac7: + 'B[0,1]' - 'B[0,2]' - 'B[2,1]' + 'B[2,2]' - 't[0]'
     'exp_cones[2]' [PEXP]
         @ac8: + 'v[2]'
-        @ac9: + 0.0001
+        @ac9: + 100
         @ac10: - 't[0]'
     'exp_cones[3]' [PEXP]
         @ac11: + 'v[3]'
-        @ac12: + 0.0001
+        @ac12: + 100
         @ac13: - 't[1]'
     'exp_cones[4]' [PEXP]
         @ac14: + 'v[4]'
-        @ac15: + 0.0001
+        @ac15: + 100
         @ac16: + 2 'B[0,1]' - 2 'B[0,2]' + 'B[1,1]' - 'B[1,2]' - 't[1]'
     'exp_cones[5]' [PEXP]
         @ac17: + 'v[5]'
-        @ac18: + 0.0001
+        @ac18: + 100
         @ac19: - 't[1]'
 Variables
     '1.0' [1]

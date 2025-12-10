@@ -1,5 +1,5 @@
-eta: 0.1
-loss_fn: !!python/name:function_lib.pairwise_loss ''
+eta: 10
+loss_fn: !!python/name:function_lib.listnet_loss ''
 lr: 0.1
 max_epochs: 5000
 sols:
@@ -112,4 +112,4 @@ sols:
   - !!binary |
     AAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAA
     AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAEAAAAAAAAA
-tau: 0.1
+tau: 10
