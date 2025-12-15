@@ -91,10 +91,10 @@ if __name__ == '__main__':
 
     n_simulation = 30          # number of seeds (= number of instances in the pickle)
     degs = [1, 2, 4, 6, 8]
-    input_dims = [3]
+    input_dims = [4]
     ns = [100]     # num_instances per seed
     mult_noises = [0, 0.5]
-    grid_widths = [3]
+    grid_widths = [4]
 
     SETTINGS = [(n, input_dim, mult_noise, deg, grid_width)
                 for n in ns

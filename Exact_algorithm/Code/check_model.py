@@ -377,7 +377,7 @@ def tiny_spo_test():
     gc.collect()
 
 if __name__ == "__main__":
-    FLAG = 4
+    FLAG = 3
     eta=100
     print('start')
     match FLAG:

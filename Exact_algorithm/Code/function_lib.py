@@ -23,6 +23,7 @@ from gurobipy import GRB
 from unittest import case
 from matplotlib.ticker import PercentFormatter
 from matplotlib.patches import Patch
+from pathlib import Path
 
 #######################################################################################################################################
 ######################################################### Common function #############################################################

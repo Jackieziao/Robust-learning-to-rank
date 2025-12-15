@@ -1,7 +1,7 @@
 eta: 10
 loss_fn: !!python/name:function_lib.listnet_loss ''
 lr: 0.1
-max_epochs: 5000
+max_epochs: 30
 sols:
 - !!python/object/apply:numpy._core.multiarray._reconstruct
   args:

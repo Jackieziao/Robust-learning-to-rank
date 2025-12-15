@@ -15,7 +15,8 @@ ModelClass   = get_model_class(model_type)
 
 # ----------------- paths ------------------
 base_path = change_to_py_file_dir(True)
-base      = os.path.join(base_path, "Data", "Shortest_path")
+parent_path = str(Path(base_path).parent)
+base      = os.path.join(parent_path, "Data", "Shortest_path")
 
 ckpt_root = Path(base_path) / "Result" / "Train" / "ckpt_dir"
 log_dir  = Path(base_path) / "Result" / "Train" / "CSVlogger"
