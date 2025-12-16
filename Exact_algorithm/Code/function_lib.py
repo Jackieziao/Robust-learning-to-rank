@@ -7,6 +7,7 @@ import shutil
 import gc
 import psutil
 import sys
+import mosek
 
 import numpy as np
 import pandas as pd
@@ -916,7 +917,7 @@ class PairwiseECPERM:
            sum_{(z,z') in O_n} v_{n,z,z'} <= eta
     """
 
-    def __init__(self, X, C, Z, eta: float, tol: float = 1e-9):
+    def __init__(self, X, C, Z, eta: float, tol: float = 1e-6):
         """
         Parameters
         ----------
@@ -1002,6 +1003,9 @@ class PairwiseECPERM:
         Builds the MOSEK optimization model using sparse mapping matrices.
         """
         self.M = Model("pairwise_ecp_erm_fast")
+        self.M.setSolverParam("intpntCoTolRelGap", self.tol)
+        self.M.setSolverParam("intpntCoTolPfeas", self.tol)
+        self.M.setSolverParam("intpntCoTolDfeas", self.tol)
         M = self.M
 
         N, d_x, d_c, Q = self.N, self.d_x, self.d_c, self.Q
@@ -1145,12 +1149,13 @@ class MLEECPParam:
     - Vectorized operations for speed.
     """
 
-    def __init__(self, N, d_x, d_c, Z, eta: float):
+    def __init__(self, N, d_x, d_c, Z, eta: float, tol: float = 1e-6):
         self.N = int(N)
         self.d_x = int(d_x)
         self.d_c = int(d_c)
         self.Z = np.asarray(Z, dtype=float)
         self.eta = float(eta)
+        self.tol = tol
 
         self.K, d_c2 = self.Z.shape
         if d_c2 != self.d_c:
@@ -1215,6 +1220,9 @@ class MLEECPParam:
     def _build_model(self):
         M = Model("listmle_ecp_param")
         self.M = M
+        self.M.setSolverParam("intpntCoTolRelGap", self.tol)
+        self.M.setSolverParam("intpntCoTolPfeas", self.tol)
+        self.M.setSolverParam("intpntCoTolDfeas", self.tol)
 
         # Parameter: A_par (N*K, D)
         self.A_par = M.parameter("A", [self.N * self.K, self.D])
@@ -1376,7 +1384,7 @@ class DIOECPParam:
     """
 
     # ----------------------------------------------------------------------
-    def __init__(self, N, d_x, d_c, Z, eta: float):
+    def __init__(self, N, d_x, d_c, Z, eta: float, tol: float = 1e-6):
         self.N = int(N)
         self.d_x = int(d_x)
         self.d_c = int(d_c)
@@ -1384,6 +1392,7 @@ class DIOECPParam:
         self.Z = np.asarray(Z, float)          # (K, d_c)
         self.K = self.Z.shape[0]
         self.eta = float(eta)
+        self.tol = tol
 
         self._build_model()
 
@@ -1391,6 +1400,9 @@ class DIOECPParam:
     def _build_model(self):
         M = Model("dio_ecp_param")
         self.M = M
+        self.M.setSolverParam("intpntCoTolRelGap", self.tol)
+        self.M.setSolverParam("intpntCoTolPfeas", self.tol)
+        self.M.setSolverParam("intpntCoTolDfeas", self.tol)
 
         # --------------------------
         # Parameters
