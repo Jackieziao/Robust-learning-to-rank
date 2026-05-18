@@ -1,4 +1,4 @@
-from function_lib import *
+from Simulation.Exact_algorithm.Code.function_lib import *
 
 #########################################################################################################
 ##################################### Testing the implementation  #######################################

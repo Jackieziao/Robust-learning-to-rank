@@ -1,4 +1,4 @@
-from function_lib import *  # assuming this defines change_to_parent_dir_once, etc.
+from Simulation.Exact_algorithm.Code.function_lib import *  # assuming this defines change_to_parent_dir_once, etc.
 
 def bernoulli(p: float) -> int:
     """Sample a Bernoulli(p) random variable."""

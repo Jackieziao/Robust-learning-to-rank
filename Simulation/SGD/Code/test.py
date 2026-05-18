@@ -1,4 +1,4 @@
-from function_lib import *
+from Simulation.SGD.Code.function_lib import *
 
 # ----------------- config -----------------
 n_instance   = 1000

@@ -23,7 +23,7 @@ and store it in a file with a prefix "sol_"
 
 [1] Elmachtoub, A. N., & Grigas, P. (2021). Smart “predict, then optimize”. Management Science.
 """
-from function_lib import *
+from Simulation.SGD.Code.function_lib import *
 
 def bernoulli(p):
     if random.random() <= p:
