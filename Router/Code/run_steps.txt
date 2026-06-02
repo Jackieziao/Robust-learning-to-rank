@@ -1,0 +1,6 @@
+cd "D:\Desktop\Robust-learning-to-rank\Router\Code"
+conda activate routerbench
+python -X utf8 convert_data.py --config configs/convert_data.yaml
+
+python -X utf8 evaluate_routers.py --config configs/evaluate_routers.yaml
+python -X utf8 visualize_results.py --config configs/visualize.yaml
