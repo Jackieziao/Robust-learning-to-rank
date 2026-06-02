@@ -161,6 +161,7 @@ cython_debug/
 #.idea/
 gcs_credentials.json
 /data
+external_dataset/
 .pypirc
 pip.conf
 *.zip

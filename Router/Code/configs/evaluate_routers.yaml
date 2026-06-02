@@ -1,20 +1,20 @@
-data_path: external_dataset/routerbench_5shot.pkl
+data_path: "D:/OneDrive/\u6587\u6863/Synfiles/LLMRouter/Dataset/routerbench_5shot.pkl"
 train_fraction: 0.7
 willingness_to_pay: true
 local: true
 wanted_eval_name: ["grade-school-math", "hellaswag", "mmlu", "arc-challenge", "mbpp", "winogrande", "mtbench"]
 out_of_distribution: false
-gcp_token: <path to GCP token>
+gcp_token: ""
 data_name: routerbench
-embedding_models: ["all-MiniLM-L12-v2",]
+embedding_models: ["all-MiniLM-L12-v2"]
 local_cache: true
 knn:
   neighbors: [5, 10, 40]
-  metrics: ["cosine",]
+  metrics: ["cosine"]
 mlp:
   hidden_layer_sizes: [100, [100, 100]]
-  activation: ["relu",]
-  learning_rates: [0.001,]
+  activation: ["relu"]
+  learning_rates: [0.001]
 cascading_router:
   max_cost_per_response_list: [
                     0.001,

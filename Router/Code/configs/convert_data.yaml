@@ -1,4 +1,4 @@
-data_path: external_dataset/routerbench_raw.pkl
+data_path: "D:/OneDrive/\u6587\u6863/Synfiles/LLMRouter/Dataset/routerbench_raw.pkl"
 input_format: openai
 data_name: routerbench
 embedding_models: ["all-MiniLM-L12-v2"]
