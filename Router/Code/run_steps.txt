@@ -1,4 +1,16 @@
-cd "D:\Desktop\Robust-learning-to-rank\Router\Code"
+create .env CONNECTION_STRING=dummy
+
+run in anaconda powershell
+cd "C:\Users\zhaoz\Desktop\Project\Robust-learning-to-rank\Router\Code"
+
+or cd "D:\Desktop\Robust-learning-to-rank\Router\Code"
+
+conda create -n routerbench python=3.10 -y
+conda activate routerbench
+pip install -r requirements.txt
+pip install -e .
+
+
 conda activate routerbench
 python -X utf8 convert_data.py --config configs/convert_data.yaml
 

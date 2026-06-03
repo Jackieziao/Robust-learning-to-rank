@@ -2,10 +2,19 @@ import ast
 from abc import ABC, abstractmethod
 from typing import Union
 
+import tiktoken
 from numpy.typing import NDArray
-from tokencost import count_string_tokens
 
 from routers.common import TOKEN_COSTS
+
+
+def count_string_tokens(prompt: str, model: str) -> int:
+    model = model.lower()
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+    except KeyError:
+        encoding = tiktoken.get_encoding("cl100k_base")
+    return len(encoding.encode(prompt))
 
 
 def get_prompt_token_cost(model_name: str) -> float:
