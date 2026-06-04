@@ -1,6 +1,14 @@
-create .env CONNECTION_STRING=dummy
+create .env 
+
+CONNECTION_STRING=''
+local_cache: true
+local: true
 
 run in anaconda powershell
+
+& "$env:USERPROFILE\anaconda3\Scripts\conda.exe" init powershell
+
+
 cd "C:\Users\zhaoz\Desktop\Project\Robust-learning-to-rank\Router\Code"
 
 or cd "D:\Desktop\Robust-learning-to-rank\Router\Code"
